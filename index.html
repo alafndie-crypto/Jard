@@ -87,6 +87,26 @@ input,button{font-family:'Tajawal',sans-serif}
 
 /* ── CONTENT ── */
 .content{padding:11px 11px 0}
+.search-bar{display:flex;align-items:center;gap:8px;padding:8px 11px 4px}
+.search-inp{flex:1;padding:9px 14px;border:2px solid var(--border);border-radius:14px;font-size:15px;font-weight:600;outline:none;direction:rtl;color:var(--text);transition:border-color .2s}
+.search-inp:focus{border-color:var(--navy2)}
+.search-clear{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:4px}
+.save-indicator{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;min-height:13px;transition:color .3s}
+.save-indicator.saved{color:#4caf50}
+.undo-bar{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a2e50;color:#fff;border-radius:16px;padding:11px 18px;display:flex;align-items:center;gap:14px;font-size:14px;font-weight:700;z-index:300;box-shadow:0 4px 20px rgba(0,0,0,.3);transition:opacity .3s;white-space:nowrap;opacity:0;pointer-events:none}
+.undo-bar.show{opacity:1;pointer-events:auto;display:flex!important}
+.undo-btn{background:var(--gold);color:var(--navy);border:none;border-radius:10px;padding:6px 14px;font-size:13px;font-weight:900;cursor:pointer}
+.lock-btn{background:none;border:none;font-size:20px;cursor:pointer;padding:4px 6px;line-height:1}
+.locked-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;align-items:center;justify-content:center}
+.locked-overlay.open{display:flex}
+.lock-box{background:#fff;border-radius:20px;padding:28px 24px;width:88%;max-width:360px;text-align:center}
+.lock-title{font-size:18px;font-weight:900;color:var(--navy);margin-bottom:6px}
+.lock-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.lock-inp{width:100%;padding:13px;border:2px solid var(--border);border-radius:13px;font-size:22px;font-weight:800;text-align:center;outline:none;letter-spacing:6px;color:var(--navy)}
+.lock-inp:focus{border-color:var(--navy2)}
+.lock-acts{display:flex;gap:10px;margin-top:14px}
+.lock-set{flex:1;padding:12px;background:var(--navy2);color:#fff;border:none;border-radius:13px;font-size:14px;font-weight:800;cursor:pointer}
+.lock-unlock{flex:1;padding:12px;background:var(--green);color:#fff;border:none;border-radius:13px;font-size:14px;font-weight:800;cursor:pointer}
 .cat-grp{margin-bottom:10px;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .cat-hdr{background:var(--navy2);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
 .cat-name{font-size:14px;font-weight:800}
@@ -345,6 +365,7 @@ input,button{font-family:'Tajawal',sans-serif}
       </div>
       <div class="hdr-btns">
         <button class="hdr-btn" title="نسخ احتياطي" onclick="openBackup()">💾</button>
+        <button class="lock-btn" id="lock-btn" title="قفل البيانات" onclick="toggleLock()">🔓</button>
       </div>
     </div>
     <div class="hdr-r2">
@@ -354,6 +375,7 @@ input,button{font-family:'Tajawal',sans-serif}
           <button class="hdr-edit-btn" onclick="openEditName()">✏️ تعديل</button>
         </div>
         <div class="hdr-year" id="hdr-year"></div>
+        <div class="save-indicator" id="save-indicator">—</div>
       </div>
       <div class="total-pill" id="hdr-total">0 ريال</div>
     </div>
@@ -385,12 +407,39 @@ input,button{font-family:'Tajawal',sans-serif}
     </div>
   </div>
 
+  <!-- شريط البحث -->
+  <div class="search-bar" id="search-bar" style="display:none">
+    <input class="search-inp" id="search-inp" type="text" placeholder="🔍 بحث بالسعر أو الصنف..." oninput="doSearch()" autocomplete="off" dir="rtl">
+    <button class="search-clear" onclick="clearSearch()">✕</button>
+  </div>
+
   <div class="content" id="content"></div>
+
+  <!-- شريط التراجع -->
+  <div class="undo-bar" id="undo-bar" style="display:none">
+    <span id="undo-msg">تم الحذف</span>
+    <button class="undo-btn" onclick="doUndo()">↩ تراجع</button>
+  </div>
+
+  <!-- نافذة القفل -->
+  <div class="locked-overlay" id="lock-overlay">
+    <div class="lock-box">
+      <div style="font-size:40px;margin-bottom:8px" id="lock-icon">🔒</div>
+      <div class="lock-title" id="lock-title">قفل البيانات</div>
+      <div class="lock-sub" id="lock-sub">أدخل رقماً سرياً (4-6 أرقام)</div>
+      <input class="lock-inp" id="lock-inp" type="password" inputmode="numeric" maxlength="6" placeholder="••••" oninput="onLockInp()">
+      <div class="lock-acts">
+        <button class="lock-set" id="lock-action-btn" onclick="doLockAction()">تأكيد</button>
+        <button class="lock-set" style="background:var(--muted)" onclick="closeLockOverlay()">إلغاء</button>
+      </div>
+    </div>
+  </div>
 
   <div class="btm-acts">
     <button class="fab-side clr" onclick="confirmClear()">🗑️</button>
     <button class="fab" onclick="openAdd()">＋ إضافة صنف</button>
     <button class="fab-side" style="background:#6d4c9e" onclick="openBatch()">📋</button>
+    <button class="fab-side" style="background:#0d7377" onclick="toggleSearch()">🔍</button>
     <button class="fab-side sum" onclick="openSummary()">📊</button>
   </div>
 </div>
@@ -426,6 +475,13 @@ input,button{font-family:'Tajawal',sans-serif}
       <div class="m-pin-row" onclick="togglePin()">
         <span class="m-pin-lbl">📌 ثبّت الصنف بعد الحفظ</span>
         <div class="m-pin-toggle" id="m-pin-toggle"></div>
+      </div>
+      <!-- نقل البند — يظهر فقط عند التعديل -->
+      <div class="m-field" id="move-field" style="display:none">
+        <label>📦 نقل إلى</label>
+        <select id="inp-move" style="width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:13px;font-size:16px;font-weight:700;outline:none;color:var(--text);background:#fff;appearance:auto;direction:rtl">
+          <option value="">— في مكانه (بدون نقل) —</option>
+        </select>
       </div>
     </div>
     <div class="m-acts">
@@ -698,6 +754,9 @@ function _openIDB(){
 // ── حفظ البيانات (يختار الطريقة تلقائياً) ──
 function saveS(){
   const snapshot = JSON.parse(JSON.stringify(S));
+  // مؤشر الحفظ
+  const si=document.getElementById('save-indicator');
+  if(si){const now=new Date();const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');si.textContent='✓ حُفظ '+t;si.classList.add('saved');setTimeout(()=>{si.classList.remove('saved');},2500);}
   if(_isAndroid()){
     _androidSave(snapshot);
     return;
@@ -848,18 +907,21 @@ function whTotal(){return WH_SECS.reduce((t,s)=>t+sum(S.warehouse[s]),0);}
 function grandTotal(){return whTotal()+sum(S.branch1)+(S.settings.branchCount===2?sum(S.branch2):0);}
 
 // ── RENDER ──
+let _searchQuery='';
 function renderCurrent(){
-  const items=curItems(),el=document.getElementById('content');
+  const allItems=curItems();
+  const items=_searchQuery?allItems.filter(i=>i.cat.toLowerCase().includes(_searchQuery)||String(i.p).includes(_searchQuery)||String(i.c).includes(_searchQuery)):allItems;
+  const el=document.getElementById('content');
   if(!items.length){el.innerHTML=`<div class="empty"><div class="empty-ic">📋</div><div class="empty-t">لا توجد أصناف بعد</div><div class="empty-s">اضغط "إضافة صنف" للبدء</div></div>`;return;}
   const{g,o}=groupByCat(items);let html='';
   o.forEach(cat=>{
     const ci=g[cat],ct=sum(ci);
-    html+=`<div class="cat-grp"><div class="cat-hdr"><span class="cat-name">${cat}</span><span class="cat-sub">${fmt(ct)} ريال</span></div>`;
+    html+=`<div class="cat-grp"><div class="cat-hdr"><span class="cat-name">${cat}</span><span style="display:flex;align-items:center;gap:8px"><span class="cat-sub">${fmt(ct)} ريال</span>${_isLocked?'':'<button onclick="renameCat(\'${encodeURIComponent(cat)}\')" style="background:rgba(255,255,255,0.18);border:none;border-radius:8px;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✏️ تغيير</button>'}</span></div>`;
     ci.forEach(it=>{html+=`<div class="item-row"><div class="item-nums">
       <div class="i-blk"><span class="i-lbl">السعر</span><span class="i-val">${fmt(it.p)}</span></div>
       <div class="i-blk"><span class="i-lbl">العدد</span><span class="i-val">${fmt(it.c)}</span></div>
       <div class="i-blk"><span class="i-lbl">الإجمالي</span><span class="i-val tot">${fmt(it.p*it.c)}</span></div>
-      </div><div class="item-acts"><button class="act-btn" onclick="editItem('${it.id}')">✏️</button><button class="act-btn" onclick="confirmDel('${it.id}')">🗑️</button></div></div>`;});
+      </div>${_isLocked?'':`<div class="item-acts"><button class="act-btn" onclick="editItem('${it.id}')">✏️</button><button class="act-btn" onclick="confirmDel('${it.id}')">🗑️</button></div>`}</div>`;});
     html+='</div>';
   });
   el.innerHTML=html;
@@ -899,6 +961,8 @@ function openAdd(){
   }
   document.getElementById('m-pin-toggle').classList.toggle('on',_pinCat);
   document.getElementById('m-calc').textContent='0';
+  document.getElementById('move-field').style.display='none';
+  document.getElementById('inp-move').value='';
   document.getElementById('add-modal').classList.add('open');
   setTimeout(()=>document.getElementById('inp-p').focus(),220);
 }
@@ -911,6 +975,31 @@ function editItem(id){
   document.getElementById('inp-cat').value=it.cat;
   document.getElementById('m-pin-badge').classList.remove('show');
   calcPrev();
+  // بناء قائمة النقل
+  const sel=document.getElementById('inp-move');
+  sel.innerHTML='<option value="">— في مكانه (بدون نقل) —</option>';
+  const cfg=S.settings;
+  WH_SECS.forEach(s=>{
+    if(!(activeMain==='warehouse'&&activeSec===s)){
+      const o=document.createElement('option');
+      o.value='warehouse|'+s;
+      o.textContent='🏭 المستودع ← '+WH_LBL[s];
+      sel.appendChild(o);
+    }
+  });
+  if(activeMain!=='branch1'){
+    const o=document.createElement('option');
+    o.value='branch1';
+    o.textContent='🏪 '+cfg.branch1Name;
+    sel.appendChild(o);
+  }
+  if(cfg.branchCount===2&&activeMain!=='branch2'){
+    const o=document.createElement('option');
+    o.value='branch2';
+    o.textContent='🏪 '+cfg.branch2Name;
+    sel.appendChild(o);
+  }
+  document.getElementById('move-field').style.display='';
   document.getElementById('add-modal').classList.add('open');
 }
 function closeModal(){
@@ -932,8 +1021,30 @@ function calcPrev(){const p=parseFloat(document.getElementById('inp-p').value)||
 function saveItem(){
   const p=parseFloat(document.getElementById('inp-p').value),c=parseInt(document.getElementById('inp-c').value),cat=document.getElementById('inp-cat').value.trim();
   if(!p||p<=0){alert('الرجاء إدخال السعر');return;}if(!c||c<=0){alert('الرجاء إدخال العدد');return;}if(!cat){alert('الرجاء إدخال الصنف');return;}
+  const moveTo=document.getElementById('inp-move')?document.getElementById('inp-move').value:'';
   let items=curItems();
-  if(editId){const idx=items.findIndex(i=>i.id===editId);if(idx!==-1)items[idx]={...items[idx],p,c,cat};}
+  if(editId){
+    const idx=items.findIndex(i=>i.id===editId);
+    if(idx!==-1){
+      const updItem={...items[idx],p,c,cat};
+      if(moveTo&&moveTo!==''){
+        // حذف من المكان الحالي
+        items.splice(idx,1);
+        setCurItems(items);
+        // إضافة للمكان الجديد
+        if(moveTo.startsWith('warehouse|')){
+          const sec=moveTo.split('|')[1];
+          S.warehouse[sec].push({...updItem,id:uid()});
+        }else if(moveTo==='branch1'){
+          S.branch1.push({...updItem,id:uid()});
+        }else if(moveTo==='branch2'){
+          S.branch2.push({...updItem,id:uid()});
+        }
+      }else{
+        items[idx]=updItem;
+      }
+    }
+  }
   else items.push({id:uid(),p,c,cat});
   setCurItems(items);saveS();renderCurrent();updateAllTotals();
   // إذا التثبيت مفعّل → أبقِ النموذج مفتوحاً وامسح السعر والعدد فقط
@@ -976,23 +1087,186 @@ function saveEditName(){
 // ── CONFIRM MODAL ──
 function showCM(ic,t,m,yl,yc,action){
   pendingAction=action;
-  document.getElementById('cm-ic').textContent=ic;document.getElementById('cm-t').textContent=t;document.getElementById('cm-m').textContent=m;
+  document.getElementById('cm-ic').textContent=ic;document.getElementById('cm-t').textContent=t;document.getElementById('cm-m').innerHTML=m;
   const yb=document.getElementById('cm-yes');yb.textContent=yl;yb.style.background=yc;
   document.getElementById('cm').classList.add('open');
 }
-function closeCM(){document.getElementById('cm').classList.remove('open');pendingAction=null;}
+function closeCM(){document.getElementById('cm').classList.remove('open');pendingAction=null;const yb=document.getElementById('cm-yes');if(yb)yb.style.display='';}
 document.getElementById('cm-yes').addEventListener('click',()=>{if(pendingAction)pendingAction();});
 
+
+// ── إعادة تسمية أو تبديل صنف كامل ──
+function renameCat(encodedOldCat){
+  const oldCat=decodeURIComponent(encodedOldCat);
+  const suggestions=['نسائي','رجالي','بناتي','ولادي','مواليد','ألعاب','كماليات','أحذية','داخلي'];
+  // الأصناف الموجودة حالياً في هذا القسم (باستثناء الصنف الحالي)
+  const {g}=groupByCat(curItems());
+  const otherCats=Object.keys(g).filter(c=>c!==oldCat);
+  const dlId='rename-dl-'+Date.now();
+  // بناء خيار التبديل فقط إذا يوجد أصناف أخرى
+  const swapHtml=otherCats.length>0
+    ?`<div style="margin-top:12px;padding-top:12px;border-top:1px solid #ddd">
+        <div style="font-size:12px;font-weight:700;color:#888;margin-bottom:6px">🔄 أو بدّل مع صنف آخر موجود:</div>
+        <select id="swap-sel" style="width:100%;padding:10px 12px;border:2px solid #1a2e50;border-radius:12px;font-size:16px;font-weight:700;direction:rtl;background:#fff">
+          <option value="">— اختر للتبديل —</option>
+          ${otherCats.map(c=>`<option value="${encodeURIComponent(c)}">${c}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:#e74c3c;margin-top:5px">⚡ التبديل يغيّر الاثنين في نفس الوقت بدون اندماج</div>
+      </div>`
+    :'';
+  showCM('✏️','تغيير اسم الصنف',
+    `الصنف الحالي: <b>${oldCat}</b><br><br>`+
+    `<input id="rename-inp" type="text" value="${oldCat}" list="${dlId}" `+
+    `style="width:100%;padding:10px 12px;border:2px solid #1a2e50;border-radius:12px;`+
+    `font-size:17px;font-weight:700;text-align:right;direction:rtl">`+
+    `<datalist id="${dlId}">${suggestions.map(s=>`<option value="${s}">`).join('')}</datalist>`+
+    swapHtml,
+    'تطبيق','#1a6e35',()=>{
+      // تحقق هل اختار تبديل
+      const swapSel=document.getElementById('swap-sel');
+      const swapVal=swapSel?swapSel.value:'';
+      if(swapVal){
+        // ── وضع التبديل: غيّر الاثنين بعلامة مؤقتة ──
+        const swapCat=decodeURIComponent(swapVal);
+        const TEMP='__SWAP_TEMP_'+Date.now()+'__';
+        let items=curItems();
+        // الخطوة 1: oldCat → TEMP
+        items=items.map(i=>i.cat===oldCat?{...i,cat:TEMP}:i);
+        // الخطوة 2: swapCat → oldCat
+        items=items.map(i=>i.cat===swapCat?{...i,cat:oldCat}:i);
+        // الخطوة 3: TEMP → swapCat
+        items=items.map(i=>i.cat===TEMP?{...i,cat:swapCat}:i);
+        setCurItems(items);saveS();renderCurrent();updateAllTotals();closeCM();
+        return;
+      }
+      // ── وضع إعادة التسمية العادية ──
+      const newCat=(document.getElementById('rename-inp').value||'').trim();
+      if(!newCat){alert('الرجاء كتابة اسم الصنف');return;}
+      if(newCat===oldCat){closeCM();return;}
+      const items=curItems().map(i=>i.cat===oldCat?{...i,cat:newCat}:i);
+      setCurItems(items);saveS();renderCurrent();updateAllTotals();closeCM();
+    }
+  );
+  setTimeout(()=>{const inp=document.getElementById('rename-inp');if(inp){inp.focus();inp.select();}},200);
+}
 function confirmDel(id){
-  showCM('🗑️','حذف الصنف','هل تريد حذف هذا الصنف؟','حذف','#c0392b',()=>{
-    setCurItems(curItems().filter(i=>i.id!==id));saveS();closeCM();renderCurrent();updateAllTotals();});
+  const it=curItems().find(i=>i.id===id);
+  if(!it)return;
+  const inpId='del-item-inp-'+Date.now();
+  const btnId='del-item-btn-'+Date.now();
+  // حفظ المعرفات عالنافذة عشان checkDelItem يلاقيهم
+  window._delItemInpId=inpId;
+  window._delItemBtnId=btnId;
+  window._delItemId=id;
+  const html=
+    `<div style="font-size:13px;color:#555;margin-bottom:10px">
+       الصنف: <b>${it.cat}</b> &nbsp;|&nbsp; السعر: <b>${fmt(it.p)}</b> &nbsp;|&nbsp; العدد: <b>${fmt(it.c)}</b>
+       <br>الإجمالي: <b style="color:#c0392b">${fmt(it.p*it.c)} ريال</b>
+     </div>
+     <div style="font-size:12px;font-weight:700;color:#888;margin-bottom:6px">اكتب كلمة <b style="color:#c0392b">تأكيد</b> لتفعيل الحذف:</div>
+     <input id="${inpId}" type="text" placeholder="تأكيد"
+       oninput="checkDelItem()"
+       autocomplete="off"
+       style="width:100%;padding:12px 14px;border:2px solid #ddd;border-radius:13px;
+              font-size:18px;font-weight:800;text-align:center;outline:none;
+              transition:border-color .2s,box-shadow .2s;color:#1a2e50">
+     <button id="${btnId}" disabled onclick="doDelItem()"
+       style="width:100%;margin-top:10px;padding:13px;background:#c0392b;color:#fff;
+              border:none;border-radius:13px;font-size:15px;font-weight:800;
+              cursor:pointer;opacity:.4;transition:opacity .2s">
+       🗑️ حذف نهائياً
+     </button>`;
+  showCM('🗑️','تأكيد الحذف',html,'','#c0392b',null);
+  // إخفاء زر التأكيد الافتراضي في showCM لأننا استبدلناه
+  setTimeout(()=>{
+    const yb=document.getElementById('cm-yes');if(yb)yb.style.display='none';
+    const inp=document.getElementById(inpId);if(inp)inp.focus();
+  },150);
+}
+function checkDelItem(){
+  const inp=document.getElementById(window._delItemInpId);
+  const btn=document.getElementById(window._delItemBtnId);
+  if(!inp||!btn)return;
+  const ok=inp.value.trim()==='تأكيد';
+  btn.disabled=!ok;
+  btn.style.opacity=ok?'1':'0.4';
+  inp.style.borderColor=ok?'#27ae60':'#ddd';
+  inp.style.boxShadow=ok?'0 0 0 3px rgba(39,174,96,.2)':'none';
+}
+function doDelItem(){
+  const id=window._delItemId;
+  if(!id)return;
+  const it=curItems().find(i=>i.id===id);
+  // حفظ للتراجع
+  window._undoItem=it?{...it}:null;
+  window._undoMain=activeMain;
+  window._undoSec=activeSec;
+  setCurItems(curItems().filter(i=>i.id!==id));
+  saveS();closeCM();renderCurrent();updateAllTotals();
+  window._delItemId=null;
+  // إظهار شريط التراجع
+  if(it){
+    const bar=document.getElementById('undo-bar');
+    document.getElementById('undo-msg').textContent=`تم حذف: ${it.cat} | ${fmt(it.p)} × ${fmt(it.c)}`;
+    bar.style.display='flex';bar.classList.add('show');
+    clearTimeout(window._undoTimer);
+    window._undoTimer=setTimeout(()=>{bar.classList.remove('show');setTimeout(()=>{bar.style.display='none';},350);window._undoItem=null;},6000);
+  }
+}
+function doUndo(){
+  const it=window._undoItem;
+  if(!it)return;
+  clearTimeout(window._undoTimer);
+  const _ub=document.getElementById('undo-bar');_ub.classList.remove('show');setTimeout(()=>{_ub.style.display='none';},350);
+  // أضف للمكان الأصلي
+  if(window._undoMain==='warehouse'){S.warehouse[window._undoSec].push(it);}
+  else if(window._undoMain==='branch1'){S.branch1.push(it);}
+  else if(window._undoMain==='branch2'){S.branch2.push(it);}
+  saveS();renderCurrent();updateAllTotals();
+  window._undoItem=null;
 }
 function confirmClear(){
   const nm=activeMain==='warehouse'?WH_LBL[activeSec]:(activeMain==='branch1'?S.settings.branch1Name:S.settings.branch2Name);
-  showCM('⚠️','مسح البيانات',`مسح جميع أصناف "${nm}" ؟\nلا يمكن التراجع.`,'مسح','#c0392b',()=>{
-    setCurItems([]);
-    saveS(); // IDB async save
-    closeCM();renderCurrent();updateAllTotals();});
+  const cnt=curItems().length;
+  const inpId='clr-inp-'+Date.now();
+  const btnId='clr-btn-'+Date.now();
+  window._clrInpId=inpId; window._clrBtnId=btnId; window._clrNm=nm;
+  const html=
+    `<div style="font-size:13px;color:#555;margin-bottom:10px">
+       سيتم مسح <b style="color:#c0392b">${cnt}</b> صنف من قسم <b>${nm}</b><br>
+       <span style="color:#e74c3c;font-size:12px">⚠️ لا يمكن التراجع عن هذه العملية</span>
+     </div>
+     <div style="font-size:12px;font-weight:700;color:#888;margin-bottom:6px">اكتب كلمة <b style="color:#c0392b">تأكيد</b> لتفعيل المسح:</div>
+     <input id="${inpId}" type="text" placeholder="تأكيد"
+       oninput="checkClrWord()"
+       autocomplete="off"
+       style="width:100%;padding:12px 14px;border:2px solid #ddd;border-radius:13px;
+              font-size:18px;font-weight:800;text-align:center;outline:none;
+              transition:border-color .2s;color:#1a2e50">
+     <button id="${btnId}" disabled onclick="doConfirmClear()"
+       style="width:100%;margin-top:10px;padding:13px;background:#c0392b;color:#fff;
+              border:none;border-radius:13px;font-size:15px;font-weight:800;
+              cursor:pointer;opacity:.4;transition:opacity .2s">
+       🗑️ مسح القسم نهائياً
+     </button>`;
+  showCM('⚠️','مسح البيانات',html,'','#c0392b',null);
+  setTimeout(()=>{
+    const yb=document.getElementById('cm-yes');if(yb)yb.style.display='none';
+    const inp=document.getElementById(inpId);if(inp)inp.focus();
+  },150);
+}
+function checkClrWord(){
+  const inp=document.getElementById(window._clrInpId);
+  const btn=document.getElementById(window._clrBtnId);
+  if(!inp||!btn)return;
+  const ok=inp.value.trim()==='تأكيد';
+  btn.disabled=!ok;
+  btn.style.opacity=ok?'1':'0.4';
+  inp.style.borderColor=ok?'#27ae60':'#ddd';
+}
+function doConfirmClear(){
+  setCurItems([]);
+  saveS();closeCM();renderCurrent();updateAllTotals();
 }
 
 // ── DELETE ALL ──
@@ -1806,6 +2080,84 @@ window.addEventListener('popstate',()=>{
 });
 
 init();
+
+// ── بحث سريع ──
+function toggleSearch(){
+  const bar=document.getElementById('search-bar');
+  const isVisible=bar.style.display!=='none';
+  bar.style.display=isVisible?'none':'flex';
+  if(!isVisible){document.getElementById('search-inp').focus();}
+  else{clearSearch();}
+}
+function doSearch(){
+  _searchQuery=document.getElementById('search-inp').value.trim().toLowerCase();
+  renderCurrent();
+}
+function clearSearch(){
+  _searchQuery='';
+  document.getElementById('search-inp').value='';
+  renderCurrent();
+}
+
+// ── قفل البيانات ──
+let _isLocked=false;
+const LOCK_KEY='jard-pin';
+function toggleLock(){
+  const pin=localStorage.getItem(LOCK_KEY);
+  if(_isLocked){
+    // فتح القفل
+    openLockOverlay('unlock');
+  } else if(pin){
+    // قفل مباشر
+    applyLock(true);
+  } else {
+    // إعداد رقم سري جديد
+    openLockOverlay('set');
+  }
+}
+function openLockOverlay(mode){
+  window._lockMode=mode;
+  const inp=document.getElementById('lock-inp');
+  inp.value='';
+  const title=document.getElementById('lock-title');
+  const sub=document.getElementById('lock-sub');
+  const btn=document.getElementById('lock-action-btn');
+  const icon=document.getElementById('lock-icon');
+  if(mode==='set'){icon.textContent='🔐';title.textContent='تعيين رقم سري';sub.textContent='أدخل رقماً من 4-6 أرقام لقفل البيانات';btn.textContent='حفظ الرقم';}
+  else if(mode==='unlock'){icon.textContent='🔓';title.textContent='فتح القفل';sub.textContent='أدخل الرقم السري';btn.textContent='فتح';}
+  document.getElementById('lock-overlay').classList.add('open');
+  setTimeout(()=>inp.focus(),200);
+}
+function closeLockOverlay(){document.getElementById('lock-overlay').classList.remove('open');}
+function onLockInp(){
+  const v=document.getElementById('lock-inp').value;
+  // أرقام فقط
+  document.getElementById('lock-inp').value=v.replace(/[^0-9]/g,'');
+}
+function doLockAction(){
+  const v=document.getElementById('lock-inp').value.trim();
+  const mode=window._lockMode;
+  if(mode==='set'){
+    if(v.length<4){alert('الرقم السري يجب أن يكون 4 أرقام على الأقل');return;}
+    localStorage.setItem(LOCK_KEY,v);
+    closeLockOverlay();
+    applyLock(true);
+  } else if(mode==='unlock'){
+    const pin=localStorage.getItem(LOCK_KEY);
+    if(v===pin){closeLockOverlay();applyLock(false);}
+    else{document.getElementById('lock-inp').style.borderColor='#e74c3c';document.getElementById('lock-inp').value='';setTimeout(()=>{document.getElementById('lock-inp').style.borderColor='';},1000);alert('الرقم السري غير صحيح');}
+  }
+}
+function applyLock(lock){
+  _isLocked=lock;
+  document.getElementById('lock-btn').textContent=lock?'🔒':'🔓';
+  // تعطيل/تفعيل أزرار الهيدر والـ FAB
+  const toDisable=document.querySelectorAll('.fab,.fab-side,.hdr-edit-btn');
+  toDisable.forEach(b=>{if(lock){b.setAttribute('data-was-disabled',b.disabled);b.disabled=true;b.style.opacity='0.4';}else{b.disabled=b.getAttribute('data-was-disabled')==='true';b.style.opacity='';}});
+  // إعادة رسم القائمة لإخفاء/إظهار أزرار البنود
+  renderCurrent();
+}
+
 </script>
 </body>
 </html>

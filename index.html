@@ -438,8 +438,8 @@ input,button{font-family:'Tajawal',sans-serif}
 
   <div class="btm-acts">
     <button class="fab-side clr" onclick="confirmClear()">🗑️</button>
-    <button class="fab" onclick="openAdd()">＋ إضافة صنف</button>
-    <button class="fab-side" style="background:#6d4c9e" onclick="openBatch()">📋</button>
+    <button class="fab fab-add" onclick="openAdd()">＋ إضافة صنف</button>
+    <button class="fab-side fab-add" style="background:#6d4c9e" onclick="openBatch()">📋</button>
     <button class="fab-side" style="background:#0d7377" onclick="toggleSearch()">🔍</button>
     <button class="fab-side sum" onclick="openSummary()">📊</button>
   </div>
@@ -2133,7 +2133,11 @@ function _updateModeUI(){
   // باقي الأزرار الجانبية (مسح، بيانات، تحليلات...): ممنوعة في كلا الوضعين
   const sideBtns=document.querySelectorAll('.fab-side,.hdr-edit-btn');
   const restrict=_isLocked||_isAddOnly;
-  sideBtns.forEach(b=>{b.disabled=restrict;b.style.opacity=restrict?'0.4':'';});
+  sideBtns.forEach(b=>{
+    // في وضع الإضافة: اسمح لأزرار الإضافة (fab-add)
+    const allowInAddOnly=_isAddOnly&&!_isLocked&&b.classList.contains('fab-add');
+    b.disabled=restrict&&!allowInAddOnly;
+    b.style.opacity=(restrict&&!allowInAddOnly)?'0.4':'';});
   renderCurrent();
 }
 

@@ -365,6 +365,7 @@ input,button{font-family:'Tajawal',sans-serif}
       </div>
       <div class="hdr-btns">
         <button class="hdr-btn" title="نسخ احتياطي" onclick="openBackup()">💾</button>
+        <button class="lock-btn" id="add-only-btn" title="وضع الإضافة فقط" onclick="toggleAddOnly()" style="font-size:16px">➕</button>
         <button class="lock-btn" id="lock-btn" title="قفل البيانات" onclick="toggleLock()">🔓</button>
       </div>
     </div>
@@ -916,12 +917,13 @@ function renderCurrent(){
   const{g,o}=groupByCat(items);let html='';
   o.forEach(cat=>{
     const ci=g[cat],ct=sum(ci);
-    html+=`<div class="cat-grp"><div class="cat-hdr"><span class="cat-name">${cat}</span><span style="display:flex;align-items:center;gap:8px"><span class="cat-sub">${fmt(ct)} ريال</span>${_isLocked?'':'<button onclick="renameCat(\'${encodeURIComponent(cat)}\')" style="background:rgba(255,255,255,0.18);border:none;border-radius:8px;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✏️ تغيير</button>'}</span></div>`;
+    const _renameBtn=(_isLocked||_isAddOnly)?'':`<button onclick="renameCat('${encodeURIComponent(cat)}')" style="background:rgba(255,255,255,0.18);border:none;border-radius:8px;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✏️ تغيير</button>`;
+    html+=`<div class="cat-grp"><div class="cat-hdr"><span class="cat-name">${cat}</span><span style="display:flex;align-items:center;gap:8px"><span class="cat-sub">${fmt(ct)} ريال</span>${_renameBtn}</span></div>`;
     ci.forEach(it=>{html+=`<div class="item-row"><div class="item-nums">
       <div class="i-blk"><span class="i-lbl">السعر</span><span class="i-val">${fmt(it.p)}</span></div>
       <div class="i-blk"><span class="i-lbl">العدد</span><span class="i-val">${fmt(it.c)}</span></div>
       <div class="i-blk"><span class="i-lbl">الإجمالي</span><span class="i-val tot">${fmt(it.p*it.c)}</span></div>
-      </div>${_isLocked?'':`<div class="item-acts"><button class="act-btn" onclick="editItem('${it.id}')">✏️</button><button class="act-btn" onclick="confirmDel('${it.id}')">🗑️</button></div>`}</div>`;});
+      </div>${(_isLocked||_isAddOnly)?'':`<div class="item-acts"><button class="act-btn" onclick="editItem('${it.id}')">✏️</button><button class="act-btn" onclick="confirmDel('${it.id}')">🗑️</button></div>`}</div>`;});
     html+='</div>';
   });
   el.innerHTML=html;
@@ -1271,6 +1273,7 @@ function doConfirmClear(){
 
 // ── DELETE ALL ──
 function openDeleteAll(){
+  if(_isLocked||_isAddOnly){alert('البيانات محمية. أدخل الرقم السري لفتح القفل أولاً.');return;}
   document.getElementById('del-inp').value='';
   document.getElementById('del-yes').disabled=true;
   document.getElementById('del-yes').classList.remove('ready');
@@ -2102,37 +2105,90 @@ function clearSearch(){
 // ── قفل البيانات ──
 let _isLocked=false;
 const LOCK_KEY='jard-pin';
+// ── نظام الأوضاع الثلاثة ──
+// _isLocked   = قفل كامل   🔒  (لا إضافة لا تعديل لا حذف)
+// _isAddOnly  = إضافة فقط  ➕🔒 (إضافة مسموحة، تعديل وحذف ممنوع)
+// كلاهما false = حر        🔓
+
+let _isAddOnly=false;
+
+function _updateModeUI(){
+  const lockBtn=document.getElementById('lock-btn');
+  const addBtn=document.getElementById('add-only-btn');
+  if(_isLocked){
+    lockBtn.textContent='🔒'; lockBtn.title='قفل كامل — اضغط للفتح';
+    lockBtn.style.color='#e74c3c';
+    addBtn.textContent='➕'; addBtn.style.color='';
+  } else if(_isAddOnly){
+    lockBtn.textContent='🔓'; lockBtn.style.color='';
+    addBtn.textContent='➕🔒'; addBtn.title='وضع الإضافة فقط — اضغط للفتح';
+    addBtn.style.color='#f39c12';
+  } else {
+    lockBtn.textContent='🔓'; lockBtn.style.color=''; lockBtn.title='قفل البيانات';
+    addBtn.textContent='➕'; addBtn.style.color=''; addBtn.title='وضع الإضافة فقط';
+  }
+  // FAB الإضافة: مسموح في الحر وفي وضع الإضافة فقط
+  const fabAdd=document.querySelector('.fab');
+  if(fabAdd){fabAdd.disabled=_isLocked;fabAdd.style.opacity=_isLocked?'0.4':'';}
+  // باقي الأزرار الجانبية (مسح، بيانات، تحليلات...): ممنوعة في كلا الوضعين
+  const sideBtns=document.querySelectorAll('.fab-side,.hdr-edit-btn');
+  const restrict=_isLocked||_isAddOnly;
+  sideBtns.forEach(b=>{b.disabled=restrict;b.style.opacity=restrict?'0.4':'';});
+  renderCurrent();
+}
+
 function toggleLock(){
   const pin=localStorage.getItem(LOCK_KEY);
   if(_isLocked){
-    // فتح القفل
-    openLockOverlay('unlock');
+    openLockOverlay('unlock-full');
   } else if(pin){
-    // قفل مباشر
-    applyLock(true);
+    _isAddOnly=false;
+    _isLocked=true;
+    _updateModeUI();
   } else {
-    // إعداد رقم سري جديد
     openLockOverlay('set');
   }
 }
+
+function toggleAddOnly(){
+  const pin=localStorage.getItem(LOCK_KEY);
+  if(_isAddOnly){
+    openLockOverlay('unlock-add');
+  } else if(_isLocked){
+    // لا تفعل شيء — القفل الكامل أقوى
+    return;
+  } else if(pin){
+    _isAddOnly=true;
+    _updateModeUI();
+  } else {
+    openLockOverlay('set');
+  }
+}
+
 function openLockOverlay(mode){
   window._lockMode=mode;
   const inp=document.getElementById('lock-inp');
-  inp.value='';
+  inp.value=''; inp.style.borderColor='';
   const title=document.getElementById('lock-title');
   const sub=document.getElementById('lock-sub');
   const btn=document.getElementById('lock-action-btn');
   const icon=document.getElementById('lock-icon');
-  if(mode==='set'){icon.textContent='🔐';title.textContent='تعيين رقم سري';sub.textContent='أدخل رقماً من 4-6 أرقام لقفل البيانات';btn.textContent='حفظ الرقم';}
-  else if(mode==='unlock'){icon.textContent='🔓';title.textContent='فتح القفل';sub.textContent='أدخل الرقم السري';btn.textContent='فتح';}
+  if(mode==='set'){
+    icon.textContent='🔐';title.textContent='تعيين رقم سري';
+    sub.textContent='رقم واحد لكلا الوضعين (4-6 أرقام)';btn.textContent='حفظ الرقم';
+  } else if(mode==='unlock-full'){
+    icon.textContent='🔒';title.textContent='فتح القفل الكامل';
+    sub.textContent='أدخل الرقم السري';btn.textContent='فتح';
+  } else if(mode==='unlock-add'){
+    icon.textContent='➕🔒';title.textContent='فتح وضع الإضافة';
+    sub.textContent='أدخل الرقم السري';btn.textContent='فتح';
+  }
   document.getElementById('lock-overlay').classList.add('open');
   setTimeout(()=>inp.focus(),200);
 }
 function closeLockOverlay(){document.getElementById('lock-overlay').classList.remove('open');}
 function onLockInp(){
-  const v=document.getElementById('lock-inp').value;
-  // أرقام فقط
-  document.getElementById('lock-inp').value=v.replace(/[^0-9]/g,'');
+  document.getElementById('lock-inp').value=document.getElementById('lock-inp').value.replace(/[^0-9]/g,'');
 }
 function doLockAction(){
   const v=document.getElementById('lock-inp').value.trim();
@@ -2141,21 +2197,24 @@ function doLockAction(){
     if(v.length<4){alert('الرقم السري يجب أن يكون 4 أرقام على الأقل');return;}
     localStorage.setItem(LOCK_KEY,v);
     closeLockOverlay();
-    applyLock(true);
-  } else if(mode==='unlock'){
+    _isLocked=true; _isAddOnly=false; _updateModeUI();
+  } else if(mode==='unlock-full'||mode==='unlock-add'){
     const pin=localStorage.getItem(LOCK_KEY);
-    if(v===pin){closeLockOverlay();applyLock(false);}
-    else{document.getElementById('lock-inp').style.borderColor='#e74c3c';document.getElementById('lock-inp').value='';setTimeout(()=>{document.getElementById('lock-inp').style.borderColor='';},1000);alert('الرقم السري غير صحيح');}
+    if(v===pin){
+      closeLockOverlay();
+      _isLocked=false; _isAddOnly=false; _updateModeUI();
+    } else {
+      const inp=document.getElementById('lock-inp');
+      inp.style.borderColor='#e74c3c'; inp.value='';
+      setTimeout(()=>{inp.style.borderColor='';},1000);
+      alert('الرقم السري غير صحيح');
+    }
   }
 }
 function applyLock(lock){
   _isLocked=lock;
-  document.getElementById('lock-btn').textContent=lock?'🔒':'🔓';
-  // تعطيل/تفعيل أزرار الهيدر والـ FAB
-  const toDisable=document.querySelectorAll('.fab,.fab-side,.hdr-edit-btn');
-  toDisable.forEach(b=>{if(lock){b.setAttribute('data-was-disabled',b.disabled);b.disabled=true;b.style.opacity='0.4';}else{b.disabled=b.getAttribute('data-was-disabled')==='true';b.style.opacity='';}});
-  // إعادة رسم القائمة لإخفاء/إظهار أزرار البنود
-  renderCurrent();
+  if(!lock)_isAddOnly=false;
+  _updateModeUI();
 }
 
 </script>

@@ -579,6 +579,7 @@ input,button{font-family:'Tajawal',sans-serif}
     <div class="bk-title">🏢 إدارة المواقع</div>
     <div id="sites-list" style="margin-bottom:14px;max-height:44vh;overflow-y:auto"></div>
     <button class="bk-btn" style="background:linear-gradient(135deg,var(--gold),var(--gold-d));color:var(--navy)" onclick="startNewSite()">➕ إضافة موقع جديد</button>
+    <button class="bk-btn" style="background:linear-gradient(135deg,#6d4c9e,#4a2f75);color:#fff" onclick="exportAllSitesXLSX()">📦 تصدير كل المواقع في ملف واحد</button>
     <button class="bk-btn bk-close" onclick="closeSitesModal()">إغلاق</button>
   </div>
 </div>
@@ -1896,15 +1897,39 @@ async function shareWhatsApp(){
 }
 
 // ── SITES MANAGER ──
-function openSitesModal(){renderSitesList();document.getElementById('sites-modal').classList.add('open');}
+function _hasOpenEntryForm(){
+  const addOpen=document.getElementById('add-modal').classList.contains('open');
+  const batchOpen=document.getElementById('batch-screen').classList.contains('open');
+  return addOpen||batchOpen;
+}
+function _computeSiteTotal(data){
+  if(!data)return 0;
+  let t=0;
+  Object.values(data.warehouse||{}).forEach(arr=>(arr||[]).forEach(it=>t+=it.p*it.c));
+  (data.branch1||[]).forEach(it=>t+=it.p*it.c);
+  (data.branch2||[]).forEach(it=>t+=it.p*it.c);
+  return t;
+}
+function openSitesModal(){
+  if(_hasOpenEntryForm()){alert('الرجاء إنهاء أو إغلاق نموذج الإضافة الحالي أولاً قبل فتح إدارة المواقع.');return;}
+  renderSitesList();document.getElementById('sites-modal').classList.add('open');
+}
 function closeSitesModal(){document.getElementById('sites-modal').classList.remove('open');}
-function renderSitesList(){
+async function renderSitesList(){
   const el=document.getElementById('sites-list');
   if(!SITES.length){el.innerHTML='<div style="text-align:center;color:var(--muted);padding:10px;font-size:13px">لا توجد مواقع محفوظة بعد</div>';return;}
-  el.innerHTML=SITES.map(s=>{
+  el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">جاري التحميل...</div>';
+  const rows=await Promise.all(SITES.map(async s=>{
+    const data=s.id===activeSiteId?S:await _idbGet('site_'+s.id);
+    return{s,total:_computeSiteTotal(data)};
+  }));
+  el.innerHTML=rows.map(({s,total})=>{
     const active=s.id===activeSiteId;
     return `<div style="display:flex;align-items:center;gap:6px;padding:12px 12px;border:2px solid ${active?'var(--gold)':'var(--border)'};border-radius:14px;margin-bottom:8px;background:${active?'rgba(201,168,76,.12)':'#fff'}">
-      <div style="flex:1;font-weight:800;color:var(--navy);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${active?'⭐ ':''}${s.name}</div>
+      <div style="flex:1;overflow:hidden">
+        <div style="font-weight:800;color:var(--navy);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${active?'⭐ ':''}${s.name}</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:2px">إجمالي الجرد: ${fmt(total)} ريال</div>
+      </div>
       ${active?'':`<button onclick="switchSite('${s.id}')" style="background:var(--navy2);color:#fff;border:none;border-radius:10px;padding:8px 10px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">تبديل</button>`}
       <button onclick="renameSite('${s.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">✏️</button>
       <button onclick="deleteSite('${s.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">🗑️</button>
@@ -1919,15 +1944,18 @@ async function switchSite(id){
   activeSiteId=id;
   await _idbPut('active_site',id);
   S=data;
+  activeMain='warehouse';activeSec='شد-صيفي';
   closeSitesModal();
   if(S.settings.initialized)showMain();else showSettings(false);
 }
 function startNewSite(){
+  if(_isLocked||_isAddOnly){alert('البيانات محمية. أدخل الرقم السري لفتح القفل أولاً.');return;}
   closeSitesModal();
   saveS(); // احفظ الموقع الحالي أولاً
   const id=uid();
   activeSiteId=id;
   S=defState();
+  activeMain='warehouse';activeSec='شد-صيفي';
   SITES.push({id,name:'موقع جديد'});
   _idbPut('sites_index',SITES);
   _idbPut('active_site',id);
@@ -1939,6 +1967,7 @@ function startNewSite(){
   showSettings(false);
 }
 function renameSite(id){
+  if(_isLocked||_isAddOnly){alert('البيانات محمية. أدخل الرقم السري لفتح القفل أولاً.');return;}
   const meta=SITES.find(s=>s.id===id);if(!meta)return;
   showCM('✏️','إعادة تسمية الموقع',
     `<input id="site-rename-inp" type="text" value="${meta.name}" style="width:100%;padding:10px 12px;border:2px solid #1a2e50;border-radius:12px;font-size:17px;font-weight:700;text-align:right;direction:rtl">`,
@@ -1953,6 +1982,7 @@ function renameSite(id){
   setTimeout(()=>{const inp=document.getElementById('site-rename-inp');if(inp){inp.focus();inp.select();}},200);
 }
 function deleteSite(id){
+  if(_isLocked||_isAddOnly){alert('البيانات محمية. أدخل الرقم السري لفتح القفل أولاً.');return;}
   const meta=SITES.find(s=>s.id===id);if(!meta)return;
   if(SITES.length<=1){alert('لا يمكن حذف آخر موقع متبقي. استخدم "حذف جميع البيانات" إن أردت البدء من جديد.');return;}
   showCM('⚠️','حذف الموقع',`سيتم حذف موقع <b>${meta.name}</b> وكل بياناته نهائياً. لا يمكن التراجع.`,'حذف نهائياً','#c0392b',async()=>{
@@ -1966,6 +1996,7 @@ function deleteSite(id){
       await _idbPut('active_site',next.id);
       const data=await _idbGet('site_'+next.id);
       S=data||defState();
+      activeMain='warehouse';activeSec='شد-صيفي';
       if(S.settings.initialized)showMain();else showSettings(false);
     }
     renderSitesList();
@@ -1973,6 +2004,41 @@ function deleteSite(id){
 }
 
 // ── BACKUP ──
+async function exportAllSitesXLSX(){
+  if(!SITES.length){alert('لا توجد مواقع محفوظة');return;}
+  saveS(); // تأكد من حفظ الموقع الحالي أولاً
+  const wb=XLSX.utils.book_new();
+  const summaryRows=[[CO_NAME,'',''],['ملخص عام لكل المواقع','',''],['','',''],['الموقع','عدد الأصناف','الإجمالي (ريال)']];
+  for(const s of SITES){
+    const data=s.id===activeSiteId?S:await _idbGet('site_'+s.id);
+    if(!data)continue;
+    const cfg=data.settings||{};
+    const allItems=[
+      ...Object.entries(data.warehouse||{}).flatMap(([sec,arr])=>(arr||[]).map(it=>({...it,_loc:'المستودع - '+(WH_LBL[sec]||sec)}))),
+      ...(data.branch1||[]).map(it=>({...it,_loc:cfg.branch1Name||'الفرع الأول'})),
+      ...(data.branch2||[]).map(it=>({...it,_loc:cfg.branch2Name||'الفرع الثاني'}))
+    ];
+    const rows=[[CO_NAME,'','','',''],[`${s.name} - جرد ${cfg.year||''}`,'','','',''],['','','','',''],['الموقع/القسم','الصنف','السعر','العدد','الإجمالي']];
+    let total=0;
+    if(!allItems.length)rows.push(['','لا توجد بيانات','','','']);
+    else allItems.forEach(it=>{const tot=it.p*it.c;total+=tot;rows.push([it._loc,it.cat,it.p,it.c,tot]);});
+    rows.push(['','','','الإجمالي الكلي',total]);
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
+    ws['!cols']=[{wch:18},{wch:20},{wch:10},{wch:10},{wch:14}];
+    ws['!views']=[{rightToLeft:true}];
+    let sheetName=(s.name||'موقع').substring(0,31),base=sheetName,i=1;
+    while(wb.SheetNames.includes(sheetName))sheetName=(base.substring(0,28))+'_'+(++i);
+    XLSX.utils.book_append_sheet(wb,ws,sheetName);
+    summaryRows.push([s.name,allItems.length,total]);
+  }
+  const wsSum=XLSX.utils.aoa_to_sheet(summaryRows);
+  wsSum['!merges']=[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+  wsSum['!cols']=[{wch:20},{wch:14},{wch:16}];
+  wsSum['!views']=[{rightToLeft:true}];
+  XLSX.utils.book_append_sheet(wb,wsSum,'ملخص عام');
+  XLSX.writeFile(wb,`كل_المواقع_${new Date().getFullYear()}.xlsx`);
+}
 function openBackup(){document.getElementById('bk-modal').classList.add('open');}
 function closeBK(){document.getElementById('bk-modal').classList.remove('open');}
 function exportBackup(){

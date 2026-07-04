@@ -145,6 +145,8 @@ input,button{font-family:'Tajawal',sans-serif}
 .m-pre-lbl{font-size:10px;color:rgba(255,255,255,.55);margin-bottom:2px}
 .m-pre-val{font-size:30px;font-weight:900;color:var(--gold-l)}
 .m-fields{display:flex;flex-direction:column;gap:10px}
+.m-row3{display:flex;gap:8px}
+.m-row3 .m-field{flex:1;min-width:0;margin:0}
 .m-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px}
 .m-field input{width:100%;padding:12px 14px;border:2px solid var(--border);border-radius:13px;font-size:18px;font-weight:700;outline:none;transition:border-color .2s;color:var(--text)}
 .m-field input:focus{border-color:var(--navy2)}
@@ -260,6 +262,7 @@ input,button{font-family:'Tajawal',sans-serif}
 .batch-inp:focus{background:rgba(201,168,76,.12)}
 .batch-del{background:none;border:none;font-size:18px;cursor:pointer;padding:4px;border-radius:8px;line-height:1;color:var(--muted)}
 .batch-add-row{display:grid;grid-template-columns:1fr 1fr 36px;gap:6px;padding:8px 12px 4px;flex-shrink:0}
+.batch-add-row.with-op,.batch-cols.with-op,.batch-row.with-op{grid-template-columns:1fr 1fr 1fr 36px}
 .batch-add-inp{width:100%;padding:11px 8px;border:2px dashed var(--border);border-radius:12px;font-size:16px;font-weight:700;color:var(--text);font-family:'Tajawal',sans-serif;text-align:center;background:#fff;outline:none}
 .batch-add-inp:focus{border-color:var(--gold);background:rgba(201,168,76,.06)}
 .batch-add-btn{background:var(--gold);border:none;border-radius:12px;font-size:20px;cursor:pointer;color:var(--navy);font-weight:900;display:flex;align-items:center;justify-content:center}
@@ -364,6 +367,7 @@ input,button{font-family:'Tajawal',sans-serif}
         <div class="hdr-support">(الدعم الفني: المهندس صلاح غالب)</div>
       </div>
       <div class="hdr-btns">
+        <button class="hdr-btn" title="إدارة المواقع" onclick="openSitesModal()">🏢</button>
         <button class="hdr-btn" title="نسخ احتياطي" onclick="openBackup()">💾</button>
         <button class="lock-btn" id="add-only-btn" title="وضع الإضافة فقط" onclick="toggleAddOnly()" style="font-size:16px">➕</button>
         <button class="lock-btn" id="lock-btn" title="قفل البيانات" onclick="toggleLock()">🔓</button>
@@ -456,13 +460,22 @@ input,button{font-family:'Tajawal',sans-serif}
     </div>
     <div class="m-fields">
       <div class="m-pin-badge" id="m-pin-badge">📌 الصنف مثبّت</div>
-      <div class="m-field">
-        <label>السعر</label>
-        <input type="number" id="inp-p" placeholder="0" inputmode="decimal" oninput="calcPrev()">
+      <div class="m-pin-row" id="op-toggle-row" onclick="toggleOldPriceField()" style="background:rgba(21,101,192,.08);border-color:rgba(21,101,192,.3)">
+        <span class="m-pin-lbl" id="op-toggle-lbl" style="color:var(--blue)">🏷️ إضافة سعر قديم (اختياري)</span>
       </div>
-      <div class="m-field">
-        <label>العدد</label>
-        <input type="number" id="inp-c" placeholder="0" inputmode="numeric" oninput="calcPrev()">
+      <div class="m-row3" id="price-row">
+        <div class="m-field" id="op-field" style="display:none">
+          <label>السعر القديم</label>
+          <input type="number" id="inp-op" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="m-field">
+          <label>السعر</label>
+          <input type="number" id="inp-p" placeholder="0" inputmode="decimal" oninput="calcPrev()">
+        </div>
+        <div class="m-field">
+          <label>العدد</label>
+          <input type="number" id="inp-c" placeholder="0" inputmode="numeric" oninput="calcPrev()">
+        </div>
       </div>
       <div class="m-field">
         <label>الصنف</label>
@@ -536,6 +549,7 @@ input,button{font-family:'Tajawal',sans-serif}
       <button class="sbtn dl" onclick="exportXLSX()">📥 تحميل Excel (تفصيلي)</button>
       <button class="sbtn dl" style="background:linear-gradient(135deg,#1565c0,#0d47a1);" onclick="exportXLSXGrouped()">📊 تحميل Excel (مجمّع)</button>
       <button class="sbtn dl" style="background:linear-gradient(135deg,#2d7a4a,#1b5e35);" onclick="exportXLSXFinal()">📋 خلاصة الجرد النهائي</button>
+      <button class="sbtn dl" style="background:linear-gradient(135deg,#6d4c9e,#4a2f75);" onclick="exportXLSXPerBranch()">🗂️ تصدير كل فرع بملف منفصل</button>
       <button class="sbtn wa" onclick="shareWhatsApp()">📤 إرسال عبر واتساب</button>
       <button class="sbtn bk" onclick="exportBackup();closeSummary()">⬆️ تصدير نسخة احتياطية</button>
       <button class="sbtn" style="background:linear-gradient(135deg,#c9a84c,#9a7a30);color:#1a1a1a;" onclick="document.getElementById('sum-restore-file').click()">⬇️ استرداد نسخة احتياطية</button>
@@ -555,6 +569,17 @@ input,button{font-family:'Tajawal',sans-serif}
     <input type="file" id="bk-file" accept=".json" style="display:none" onchange="importBackup(event)">
     <button class="bk-btn bk-del" onclick="closeBK();openDeleteAll()">🗑️ حذف جميع البيانات</button>
     <button class="bk-btn bk-close" onclick="closeBK()">إغلاق</button>
+  </div>
+</div>
+
+<!-- ══ SITES MANAGER ══ -->
+<div class="bk-overlay" id="sites-modal">
+  <div class="bk-sheet">
+    <div class="m-handle"></div>
+    <div class="bk-title">🏢 إدارة المواقع</div>
+    <div id="sites-list" style="margin-bottom:14px;max-height:44vh;overflow-y:auto"></div>
+    <button class="bk-btn" style="background:linear-gradient(135deg,var(--gold),var(--gold-d));color:var(--navy)" onclick="startNewSite()">➕ إضافة موقع جديد</button>
+    <button class="bk-btn bk-close" onclick="closeSitesModal()">إغلاق</button>
   </div>
 </div>
 
@@ -619,7 +644,8 @@ input,button{font-family:'Tajawal',sans-serif}
   </div>
 
   <!-- رؤوس الأعمدة -->
-  <div class="batch-cols">
+  <div class="batch-cols" id="batch-cols">
+    <div class="batch-col-lbl" id="batch-col-op" style="display:none">سعر قديم</div>
     <div class="batch-col-lbl">السعر</div>
     <div class="batch-col-lbl">العدد</div>
     <div></div>
@@ -628,8 +654,14 @@ input,button{font-family:'Tajawal',sans-serif}
   <!-- السطور المُدخَلة -->
   <div class="batch-rows" id="batch-rows"></div>
 
+  <!-- زر إضافة سعر قديم للدفعة -->
+  <div class="m-pin-row" id="batch-op-toggle-row" onclick="toggleBatchOldPrice()" style="margin:0 11px 8px;background:rgba(21,101,192,.08);border-color:rgba(21,101,192,.3)">
+    <span class="m-pin-lbl" id="batch-op-toggle-lbl" style="color:var(--blue);font-size:12px">🏷️ إضافة سعر قديم (اختياري) لهذه الدفعة</span>
+  </div>
+
   <!-- سطر الإدخال الجديد -->
   <div class="batch-add-row" id="batch-add-row">
+    <input type="number" class="batch-add-inp" id="b-nop" placeholder="السعر القديم" inputmode="decimal" style="display:none" onkeydown="batchKeyNav(event,'b-nop')">
     <input type="number" class="batch-add-inp" id="b-np" placeholder="السعر" inputmode="decimal" onkeydown="batchKeyNav(event,'b-np')">
     <input type="number" class="batch-add-inp" id="b-nc" placeholder="العدد" inputmode="numeric" onkeydown="batchKeyNav(event,'b-nc')">
     <button class="batch-add-btn" onclick="addBatchRow()">＋</button>
@@ -709,6 +741,8 @@ function defState(){
     warehouse:{'شد-صيفي':[],'شد-شتوي':[],'مرفوع-صيفي':[],'مرفوع-شتوي':[]},branch1:[],branch2:[]};
 }
 let S=defState(),activeMain='warehouse',activeSec='شد-صيفي',editId=null,pendingAction=null,sCnt=1;
+// ── نظام المواقع المتعددة ──
+let SITES=[],activeSiteId=null; // SITES: [{id,name}]
 
 // ══════════════════════════════════════════
 //  STORAGE LAYER
@@ -725,17 +759,46 @@ let   _idb      = null;
 const _isAndroid = () => !!(window.AndroidStorage);
 
 // ── Android Native Storage ──
-function _androidSave(data){
-  try{ window.AndroidStorage.setItem(IDB_KEY, JSON.stringify(data)); }catch(e){}
+function _androidSave(data){_androidSaveKey(IDB_KEY,data);}
+function _androidLoad(){return _androidLoadKey(IDB_KEY);}
+function _androidClear(){_androidClearKey(IDB_KEY);}
+function _androidSaveKey(key,data){
+  try{ window.AndroidStorage.setItem(key, JSON.stringify(data)); }catch(e){}
 }
-function _androidLoad(){
+function _androidLoadKey(key){
   try{
-    const raw = window.AndroidStorage.getItem(IDB_KEY);
+    const raw = window.AndroidStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   }catch(e){ return null; }
 }
-function _androidClear(){
-  try{ window.AndroidStorage.removeItem(IDB_KEY); }catch(e){}
+function _androidClearKey(key){
+  try{ window.AndroidStorage.removeItem(key); }catch(e){}
+}
+
+// ── تخزين عام بمفتاح حر (يُستخدم لنظام المواقع المتعددة) ──
+function _idbPut(key,data){
+  if(_isAndroid()){_androidSaveKey(key,data);return Promise.resolve();}
+  return _openIDB().then(db=>new Promise(res=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(data,key);
+    tx.oncomplete=()=>res();tx.onerror=()=>res();
+  })).catch(()=>{});
+}
+function _idbGet(key){
+  if(_isAndroid())return Promise.resolve(_androidLoadKey(key));
+  return _openIDB().then(db=>new Promise((res,rej)=>{
+    const req=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(key);
+    req.onsuccess=e=>res(e.target.result||null);
+    req.onerror  =e=>rej(e.target.error);
+  })).catch(()=>null);
+}
+function _idbDelete(key){
+  if(_isAndroid()){_androidClearKey(key);return Promise.resolve();}
+  return _openIDB().then(db=>new Promise(res=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(key);
+    tx.oncomplete=()=>res();tx.onerror=()=>res();
+  })).catch(()=>{});
 }
 
 // ── IndexedDB (browser fallback) ──
@@ -758,14 +821,16 @@ function saveS(){
   // مؤشر الحفظ
   const si=document.getElementById('save-indicator');
   if(si){const now=new Date();const t=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');si.textContent='✓ حُفظ '+t;si.classList.add('saved');setTimeout(()=>{si.classList.remove('saved');},2500);}
-  if(_isAndroid()){
-    _androidSave(snapshot);
-    return;
+  const key=activeSiteId?('site_'+activeSiteId):IDB_KEY;
+  _idbPut(key,snapshot);
+  // إبقِ اسم الموقع في الفهرس متزامناً
+  if(activeSiteId){
+    const meta=SITES.find(s=>s.id===activeSiteId);
+    if(meta&&S.settings.locationName&&meta.name!==S.settings.locationName){
+      meta.name=S.settings.locationName;
+      _idbPut('sites_index',SITES);
+    }
   }
-  _openIDB().then(db=>{
-    const tx=db.transaction(IDB_STORE,'readwrite');
-    tx.objectStore(IDB_STORE).put(snapshot, IDB_KEY);
-  }).catch(()=>{});
 }
 
 // ── تحميل البيانات ──
@@ -797,25 +862,35 @@ function _clearIDB(){
 // ── INIT (async) ──
 // يُشغّل التطبيق بعد تحميل البيانات من IDB
 async function init(){
-  // أولاً: حاول تحميل من IDB
-  let data=await _loadFromIDB();
+  // ① حاول تحميل فهرس المواقع المتعددة
+  SITES=await _idbGet('sites_index')||[];
+  activeSiteId=await _idbGet('active_site')||null;
 
-  // ثانياً: إذا لا يوجد في IDB → ابحث في localStorage (هجرة البيانات القديمة)
-  if(!data){
-    try{
-      const raw=localStorage.getItem('alsalah-jard-v3')||localStorage.getItem('alsalah-jard-v2');
-      if(raw){
-        data=JSON.parse(raw);
-        S=data;
-        saveS(); // انقل البيانات القديمة إلى IDB
-        // احذف من localStorage بعد النقل
-        localStorage.removeItem('alsalah-jard-v3');
-        localStorage.removeItem('alsalah-jard-v2');
-      }
-    }catch(e){}
+  if(SITES.length){
+    // نظام المواقع موجود مسبقاً → حمّل الموقع النشط
+    let data=activeSiteId?await _idbGet('site_'+activeSiteId):null;
+    if(!data){activeSiteId=SITES[0].id;data=await _idbGet('site_'+activeSiteId);}
+    if(data)S=data;
+  } else {
+    // ② لا يوجد نظام مواقع بعد → ابحث عن بيانات قديمة (نسخة واحدة) وحوّلها لموقع أول
+    let legacy=await _loadFromIDB();
+    if(!legacy){
+      try{
+        const raw=localStorage.getItem('alsalah-jard-v3')||localStorage.getItem('alsalah-jard-v2');
+        if(raw)legacy=JSON.parse(raw);
+      }catch(e){}
+    }
+    if(legacy&&legacy.settings&&legacy.settings.initialized){
+      const id=uid();
+      S=legacy;
+      activeSiteId=id;
+      SITES=[{id,name:legacy.settings.locationName||'الموقع الأول'}];
+      await _idbPut('site_'+id,S);
+      await _idbPut('sites_index',SITES);
+      await _idbPut('active_site',id);
+    }
+    try{localStorage.removeItem('alsalah-jard-v3');localStorage.removeItem('alsalah-jard-v2');}catch(e){}
   }
-
-  if(data) S=data;
 
   // أظهر الشاشة الصحيحة أولاً ثم أخفِ شاشة التحميل
   if(S.settings.initialized) showMain();
@@ -881,6 +956,11 @@ function saveSettings(){
   const b2=document.getElementById('s-b2').value.trim()||name+' ٢';
   if(!name){alert('الرجاء إدخال اسم الموقع');return;}
   S.settings={locationName:name,branchCount:sCnt,branch1Name:b1,branch2Name:b2,year,initialized:true};
+  if(!activeSiteId){activeSiteId=uid();_idbPut('active_site',activeSiteId);}
+  let meta=SITES.find(s=>s.id===activeSiteId);
+  if(!meta){meta={id:activeSiteId,name};SITES.push(meta);}
+  else meta.name=name;
+  _idbPut('sites_index',SITES);
   saveS();showMain();
 }
 
@@ -920,7 +1000,7 @@ function renderCurrent(){
     const _renameBtn=(_isLocked||_isAddOnly)?'':`<button onclick="renameCat('${encodeURIComponent(cat)}')" style="background:rgba(255,255,255,0.18);border:none;border-radius:8px;padding:4px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✏️ تغيير</button>`;
     html+=`<div class="cat-grp"><div class="cat-hdr"><span class="cat-name">${cat}</span><span style="display:flex;align-items:center;gap:8px"><span class="cat-sub">${fmt(ct)} ريال</span>${_renameBtn}</span></div>`;
     ci.forEach(it=>{html+=`<div class="item-row"><div class="item-nums">
-      <div class="i-blk"><span class="i-lbl">السعر</span><span class="i-val">${fmt(it.p)}</span></div>
+      <div class="i-blk"><span class="i-lbl">السعر</span><span class="i-val">${fmt(it.p)}${it.op?`<span style="display:block;font-size:9px;font-weight:700;color:var(--blue)">🏷️ قديم: ${fmt(it.op)}</span>`:''}</span></div>
       <div class="i-blk"><span class="i-lbl">العدد</span><span class="i-val">${fmt(it.c)}</span></div>
       <div class="i-blk"><span class="i-lbl">الإجمالي</span><span class="i-val tot">${fmt(it.p*it.c)}</span></div>
       </div>${(_isLocked||_isAddOnly)?'':`<div class="item-acts"><button class="act-btn" onclick="editItem('${it.id}')">✏️</button><button class="act-btn" onclick="confirmDel('${it.id}')">🗑️</button></div>`}</div>`;});
@@ -942,6 +1022,20 @@ function updateAllTotals(){
 
 // ── ADD / EDIT ITEM ──
 let _pinCat=false,_pinnedCat='';
+let _showOP=false;
+function toggleOldPriceField(){
+  _showOP=!_showOP;
+  document.getElementById('op-field').style.display=_showOP?'':'none';
+  document.getElementById('op-toggle-lbl').textContent=_showOP?'🏷️ إخفاء السعر القديم':'🏷️ إضافة سعر قديم (اختياري)';
+  if(!_showOP)document.getElementById('inp-op').value='';
+  else setTimeout(()=>document.getElementById('inp-op').focus(),80);
+}
+function _resetOldPriceField(){
+  _showOP=false;
+  document.getElementById('op-field').style.display='none';
+  document.getElementById('op-toggle-lbl').textContent='🏷️ إضافة سعر قديم (اختياري)';
+  document.getElementById('inp-op').value='';
+}
 function togglePin(){
   _pinCat=!_pinCat;
   document.getElementById('m-pin-toggle').classList.toggle('on',_pinCat);
@@ -965,6 +1059,7 @@ function openAdd(){
   document.getElementById('m-calc').textContent='0';
   document.getElementById('move-field').style.display='none';
   document.getElementById('inp-move').value='';
+  _resetOldPriceField();
   document.getElementById('add-modal').classList.add('open');
   setTimeout(()=>document.getElementById('inp-p').focus(),220);
 }
@@ -976,6 +1071,14 @@ function editItem(id){
   document.getElementById('inp-c').value=it.c;
   document.getElementById('inp-cat').value=it.cat;
   document.getElementById('m-pin-badge').classList.remove('show');
+  if(it.op){
+    _showOP=true;
+    document.getElementById('op-field').style.display='';
+    document.getElementById('op-toggle-lbl').textContent='🏷️ إخفاء السعر القديم';
+    document.getElementById('inp-op').value=it.op;
+  } else {
+    _resetOldPriceField();
+  }
   calcPrev();
   // بناء قائمة النقل
   const sel=document.getElementById('inp-move');
@@ -1023,12 +1126,15 @@ function calcPrev(){const p=parseFloat(document.getElementById('inp-p').value)||
 function saveItem(){
   const p=parseFloat(document.getElementById('inp-p').value),c=parseInt(document.getElementById('inp-c').value),cat=document.getElementById('inp-cat').value.trim();
   if(!p||p<=0){alert('الرجاء إدخال السعر');return;}if(!c||c<=0){alert('الرجاء إدخال العدد');return;}if(!cat){alert('الرجاء إدخال الصنف');return;}
+  const opRaw=document.getElementById('inp-op').value;
+  const op=(_showOP&&opRaw&&parseFloat(opRaw)>0)?parseFloat(opRaw):null;
   const moveTo=document.getElementById('inp-move')?document.getElementById('inp-move').value:'';
   let items=curItems();
   if(editId){
     const idx=items.findIndex(i=>i.id===editId);
     if(idx!==-1){
       const updItem={...items[idx],p,c,cat};
+      if(op)updItem.op=op;else delete updItem.op;
       if(moveTo&&moveTo!==''){
         // حذف من المكان الحالي
         items.splice(idx,1);
@@ -1047,7 +1153,7 @@ function saveItem(){
       }
     }
   }
-  else items.push({id:uid(),p,c,cat});
+  else items.push({id:uid(),p,c,cat,...(op?{op}:{})});
   setCurItems(items);saveS();renderCurrent();updateAllTotals();
   // إذا التثبيت مفعّل → أبقِ النموذج مفتوحاً وامسح السعر والعدد فقط
   if(_pinCat&&!editId){
@@ -1055,6 +1161,7 @@ function saveItem(){
     document.getElementById('inp-p').value='';
     document.getElementById('inp-c').value='';
     document.getElementById('m-calc').textContent='0';
+    _resetOldPriceField();
     document.getElementById('m-pin-badge').classList.add('show');
     document.getElementById('m-pin-badge').textContent='📌 مثبّت: '+cat;
     setTimeout(()=>document.getElementById('inp-p').focus(),60);
@@ -1298,6 +1405,7 @@ function doDeleteAll(){
   // مسح IDB + localStorage القديم
   _clearIDB().then(()=>{});
   try{localStorage.removeItem('alsalah-jard-v3');localStorage.removeItem('alsalah-jard-v2');}catch(e){}
+  SITES=[];activeSiteId=null;
   S=defState();
   closeDeleteAll();
   // Reset UI state
@@ -1417,6 +1525,27 @@ function openSummary(){
 function closeSummary(){
   document.getElementById('sum-modal').classList.remove('open');
   if(_sumChart){_sumChart.destroy();_sumChart=null;}
+}
+
+// ── شيت توثيقي للأسعار القديم/المخفّضة (للمعلومة فقط، لا يؤثر على الجرد) ──
+function _buildOldPriceSheet(){
+  const cfg=S.settings;
+  const rows=[];
+  rows.push([CO_NAME,'','','','','']);
+  rows.push(['توثيق الأسعار المخفّضة — للمعلومة فقط (لا تدخل في مجاميع الجرد)','','','','','']);
+  rows.push(['','','','','','']);
+  rows.push(['الموقع/القسم','الصنف','السعر القديم','السعر الجديد','العدد','الإجمالي (بالسعر الجديد)']);
+  const startLen=rows.length;
+  const collect=(items,locLbl)=>items.forEach(it=>{if(it.op)rows.push([locLbl,it.cat,it.op,it.p,it.c,it.p*it.c]);});
+  WH_SECS.forEach(s=>collect(S.warehouse[s],'المستودع - '+WH_LBL[s]));
+  collect(S.branch1,cfg.branch1Name);
+  if(cfg.branchCount===2)collect(S.branch2,cfg.branch2Name);
+  if(rows.length===startLen)rows.push(['','لا توجد أصناف بسعر قديم مسجّل حالياً','','','','']);
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  ws['!cols']=[{wch:20},{wch:18},{wch:14},{wch:14},{wch:10},{wch:20}];
+  ws['!views']=[{rightToLeft:true}];
+  return ws;
 }
 
 // ── EXCEL ──
@@ -1587,7 +1716,59 @@ function buildXLSX(grouped){
   const wsSM=XLSX.utils.aoa_to_sheet(smRows);
   wsSM['!merges']=smMerges;wsSM['!cols']=[{wch:6},{wch:16},{wch:24}];wsSM['!views']=[{rightToLeft:true}];
   XLSX.utils.book_append_sheet(wb,wsSM,'الملخص');
+  XLSX.utils.book_append_sheet(wb,_buildOldPriceSheet(),'أسعار مخفضة');
   return wb;
+}
+
+// ── ورقة مستقلة لموقع واحد (تُستخدم في التصدير المنفصل لكل فرع) ──
+function _makeLocationSheet(items,title,yr){
+  const rows=[],merges=[];
+  const addM=(r,c1,c2)=>merges.push({s:{r,c:c1},e:{r,c:c2}});
+  rows.push([CO_NAME,'','','']);addM(0,0,3);
+  rows.push([`${title} - جرد ${yr}`,'','','']);addM(1,0,3);
+  rows.push(['','','','']);
+  rows.push(['السعر','العدد','الصنف','الإجمالي']);
+  if(!items.length){rows.push([0,0,'لا توجد بيانات',0]);}
+  else{
+    const{g,o}=groupByCat(items);let grand=0;
+    o.forEach(cat=>{
+      const ci=g[cat],ct=sum(ci);grand+=ct;
+      ci.forEach(it=>rows.push([it.p,it.c,cat,it.p*it.c]));
+      rows.push(['','',`إجمالي ${cat}`,ct]);
+      rows.push(['','','','']);
+    });
+    rows.push(['','','الإجمالي الكلي',grand]);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!merges']=merges;
+  ws['!cols']=[{wch:10},{wch:10},{wch:22},{wch:14}];
+  ws['!views']=[{rightToLeft:true}];
+  return ws;
+}
+function _sanitizeFilename(name){
+  return (name||'ملف').replace(/[\\/:*?"<>|]/g,'_').trim()||'ملف';
+}
+function exportXLSXPerBranch(){
+  const cfg=S.settings;
+  // ملف المستودع (قسم لكل ورقة)
+  const whWb=XLSX.utils.book_new();
+  WH_SECS.forEach(sec=>{
+    XLSX.utils.book_append_sheet(whWb,_makeLocationSheet(S.warehouse[sec],WH_LBL[sec],cfg.year),WH_LBL[sec].substring(0,31));
+  });
+  XLSX.utils.book_append_sheet(whWb,_buildOldPriceSheet(),'أسعار مخفضة');
+  XLSX.writeFile(whWb,`${_sanitizeFilename('مستودع '+cfg.locationName)}.xlsx`);
+  // ملف الفرع الأول
+  const b1Wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(b1Wb,_makeLocationSheet(S.branch1,cfg.branch1Name,cfg.year),cfg.branch1Name.substring(0,31));
+  XLSX.utils.book_append_sheet(b1Wb,_buildOldPriceSheet(),'أسعار مخفضة');
+  XLSX.writeFile(b1Wb,`${_sanitizeFilename(cfg.branch1Name)}.xlsx`);
+  // ملف الفرع الثاني إن وُجد
+  if(cfg.branchCount===2){
+    const b2Wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(b2Wb,_makeLocationSheet(S.branch2,cfg.branch2Name,cfg.year),cfg.branch2Name.substring(0,31));
+    XLSX.utils.book_append_sheet(b2Wb,_buildOldPriceSheet(),'أسعار مخفضة');
+    XLSX.writeFile(b2Wb,`${_sanitizeFilename(cfg.branch2Name)}.xlsx`);
+  }
 }
 
 function exportXLSX(){const cfg=S.settings;XLSX.writeFile(buildXLSX(false),`جرد_${cfg.locationName}_${cfg.year}.xlsx`);}
@@ -1698,6 +1879,7 @@ function buildXLSXFinal(){
   ws['!cols']=colWidths;
   ws['!views']=[{rightToLeft:true}];
   XLSX.utils.book_append_sheet(wb,ws,'خلاصة الجرد النهائي');
+  XLSX.utils.book_append_sheet(wb,_buildOldPriceSheet(),'أسعار مخفضة');
   return wb;
 }
 function exportXLSXFinal(){const cfg=S.settings;XLSX.writeFile(buildXLSXFinal(),`خلاصة_الجرد_النهائي_${cfg.locationName}_${cfg.year}.xlsx`);}
@@ -1711,6 +1893,83 @@ async function shareWhatsApp(){
       await navigator.share({files:[file],title:`جرد ${cfg.locationName}`,text:`${CO_NAME} | جرد ${cfg.locationName} - ${cfg.year}`});
     }else{XLSX.writeFile(wb,fname);alert('تم تحميل الملف. يمكنك مشاركته عبر واتساب.');}
   }catch(e){if(e.name!=='AbortError')exportXLSX();}
+}
+
+// ── SITES MANAGER ──
+function openSitesModal(){renderSitesList();document.getElementById('sites-modal').classList.add('open');}
+function closeSitesModal(){document.getElementById('sites-modal').classList.remove('open');}
+function renderSitesList(){
+  const el=document.getElementById('sites-list');
+  if(!SITES.length){el.innerHTML='<div style="text-align:center;color:var(--muted);padding:10px;font-size:13px">لا توجد مواقع محفوظة بعد</div>';return;}
+  el.innerHTML=SITES.map(s=>{
+    const active=s.id===activeSiteId;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:12px 12px;border:2px solid ${active?'var(--gold)':'var(--border)'};border-radius:14px;margin-bottom:8px;background:${active?'rgba(201,168,76,.12)':'#fff'}">
+      <div style="flex:1;font-weight:800;color:var(--navy);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${active?'⭐ ':''}${s.name}</div>
+      ${active?'':`<button onclick="switchSite('${s.id}')" style="background:var(--navy2);color:#fff;border:none;border-radius:10px;padding:8px 10px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">تبديل</button>`}
+      <button onclick="renameSite('${s.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">✏️</button>
+      <button onclick="deleteSite('${s.id}')" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px">🗑️</button>
+    </div>`;
+  }).join('');
+}
+async function switchSite(id){
+  if(id===activeSiteId)return;
+  saveS();
+  const data=await _idbGet('site_'+id);
+  if(!data){alert('تعذر تحميل بيانات هذا الموقع');return;}
+  activeSiteId=id;
+  await _idbPut('active_site',id);
+  S=data;
+  closeSitesModal();
+  if(S.settings.initialized)showMain();else showSettings(false);
+}
+function startNewSite(){
+  closeSitesModal();
+  saveS(); // احفظ الموقع الحالي أولاً
+  const id=uid();
+  activeSiteId=id;
+  S=defState();
+  SITES.push({id,name:'موقع جديد'});
+  _idbPut('sites_index',SITES);
+  _idbPut('active_site',id);
+  // إعادة تصفير نموذج الإعداد
+  document.getElementById('s-name').value='';
+  document.getElementById('s-b1').value='';document.getElementById('s-b1')._manual=false;
+  document.getElementById('s-b2').value='';document.getElementById('s-b2')._manual=false;
+  document.getElementById('settings-warn').classList.remove('show');
+  showSettings(false);
+}
+function renameSite(id){
+  const meta=SITES.find(s=>s.id===id);if(!meta)return;
+  showCM('✏️','إعادة تسمية الموقع',
+    `<input id="site-rename-inp" type="text" value="${meta.name}" style="width:100%;padding:10px 12px;border:2px solid #1a2e50;border-radius:12px;font-size:17px;font-weight:700;text-align:right;direction:rtl">`,
+    'حفظ','#1a6e35',()=>{
+      const val=(document.getElementById('site-rename-inp').value||'').trim();
+      if(!val){alert('الرجاء إدخال اسم');return;}
+      meta.name=val;
+      _idbPut('sites_index',SITES);
+      if(id===activeSiteId){S.settings.locationName=val;saveS();refreshMainUI();}
+      renderSitesList();closeCM();
+    });
+  setTimeout(()=>{const inp=document.getElementById('site-rename-inp');if(inp){inp.focus();inp.select();}},200);
+}
+function deleteSite(id){
+  const meta=SITES.find(s=>s.id===id);if(!meta)return;
+  if(SITES.length<=1){alert('لا يمكن حذف آخر موقع متبقي. استخدم "حذف جميع البيانات" إن أردت البدء من جديد.');return;}
+  showCM('⚠️','حذف الموقع',`سيتم حذف موقع <b>${meta.name}</b> وكل بياناته نهائياً. لا يمكن التراجع.`,'حذف نهائياً','#c0392b',async()=>{
+    await _idbDelete('site_'+id);
+    SITES=SITES.filter(s=>s.id!==id);
+    await _idbPut('sites_index',SITES);
+    closeCM();
+    if(id===activeSiteId){
+      const next=SITES[0];
+      activeSiteId=next.id;
+      await _idbPut('active_site',next.id);
+      const data=await _idbGet('site_'+next.id);
+      S=data||defState();
+      if(S.settings.initialized)showMain();else showSettings(false);
+    }
+    renderSitesList();
+  });
 }
 
 // ── BACKUP ──
@@ -1869,6 +2128,26 @@ function _buildAllCharts(){
 // ── BATCH ENTRY ──
 let _batchRows=[];
 let _batchCat='';
+let _batchShowOP=false;
+function toggleBatchOldPrice(){
+  _batchShowOP=!_batchShowOP;
+  document.getElementById('b-nop').style.display=_batchShowOP?'':'none';
+  document.getElementById('batch-op-toggle-lbl').textContent=_batchShowOP?'🏷️ إخفاء السعر القديم':'🏷️ إضافة سعر قديم (اختياري) لهذه الدفعة';
+  document.getElementById('batch-add-row').classList.toggle('with-op',_batchShowOP);
+  document.getElementById('batch-cols').classList.toggle('with-op',_batchShowOP);
+  document.getElementById('batch-col-op').style.display=_batchShowOP?'':'none';
+  if(!_batchShowOP)document.getElementById('b-nop').value='';
+  _renderBatchRows();
+}
+function _resetBatchOP(){
+  _batchShowOP=false;
+  document.getElementById('b-nop').value='';
+  document.getElementById('b-nop').style.display='none';
+  document.getElementById('batch-op-toggle-lbl').textContent='🏷️ إضافة سعر قديم (اختياري) لهذه الدفعة';
+  document.getElementById('batch-add-row').classList.remove('with-op');
+  document.getElementById('batch-cols').classList.remove('with-op');
+  document.getElementById('batch-col-op').style.display='none';
+}
 
 function openBatch(){
   _batchRows=[];
@@ -1878,6 +2157,7 @@ function openBatch(){
   document.getElementById('batch-cat-inp').value='';
   document.getElementById('b-np').value='';
   document.getElementById('b-nc').value='';
+  _resetBatchOP();
   const cfg=S.settings;
   const locName=activeMain==='warehouse'?'المستودع — '+WH_LBL[activeSec]:activeMain==='branch1'?cfg.branch1Name:cfg.branch2Name;
   document.getElementById('batch-loc-lbl').textContent=locName;
@@ -1946,7 +2226,8 @@ function onBatchCatCustom(){
 function batchKeyNav(e,field){
   if(e.key==='Enter'||e.key==='Tab'){
     e.preventDefault();
-    if(field==='b-np'){document.getElementById('b-nc').focus();}
+    if(field==='b-nop'){document.getElementById('b-np').focus();}
+    else if(field==='b-np'){document.getElementById('b-nc').focus();}
     else if(field==='b-nc'){addBatchRow();}
   }
 }
@@ -1954,14 +2235,17 @@ function batchKeyNav(e,field){
 function addBatchRow(){
   const p=parseFloat(document.getElementById('b-np').value);
   const c=parseInt(document.getElementById('b-nc').value);
+  const opRaw=document.getElementById('b-nop').value;
+  const op=(_batchShowOP&&opRaw&&parseFloat(opRaw)>0)?parseFloat(opRaw):null;
   if(!p||p<=0){document.getElementById('b-np').focus();return;}
   if(!c||c<=0){document.getElementById('b-nc').focus();return;}
-  _batchRows.push({id:uid(),p,c});
+  _batchRows.push({id:uid(),p,c,...(op?{op}:{})});
   document.getElementById('b-np').value='';
   document.getElementById('b-nc').value='';
+  document.getElementById('b-nop').value='';
   _renderBatchRows();
   _updateBatchFooter();
-  document.getElementById('b-np').focus();
+  document.getElementById(_batchShowOP?'b-nop':'b-np').focus();
 }
 
 function delBatchRow(idx){
@@ -1977,7 +2261,8 @@ function _renderBatchRows(){
     return;
   }
   el.innerHTML=_batchRows.map((r,i)=>`
-    <div class="batch-row">
+    <div class="batch-row${_batchShowOP?' with-op':''}">
+      ${_batchShowOP?`<input class="batch-inp" type="number" value="${r.op||''}" placeholder="—" inputmode="decimal" onchange="_editBatchRow(${i},'op',this.value)">`:''}
       <input class="batch-inp" type="number" value="${r.p}" inputmode="decimal" onchange="_editBatchRow(${i},'p',this.value)">
       <input class="batch-inp" type="number" value="${r.c}" inputmode="numeric" onchange="_editBatchRow(${i},'c',this.value)">
       <button class="batch-del" onclick="delBatchRow(${i})">🗑️</button>
@@ -1988,7 +2273,11 @@ function _renderBatchRows(){
 
 function _editBatchRow(idx,field,val){
   if(field==='p')_batchRows[idx].p=parseFloat(val)||0;
-  else _batchRows[idx].c=parseInt(val)||0;
+  else if(field==='c')_batchRows[idx].c=parseInt(val)||0;
+  else if(field==='op'){
+    const v=parseFloat(val);
+    if(v>0)_batchRows[idx].op=v;else delete _batchRows[idx].op;
+  }
   _updateBatchFooter();
 }
 
@@ -2008,7 +2297,7 @@ function saveBatch(){
   if(!_batchRows.length){alert('لا توجد سطور للحفظ');return;}
   const items=curItems();
   _batchRows.forEach(r=>{
-    if(r.p>0&&r.c>0)items.push({id:uid(),p:r.p,c:r.c,cat:_batchCat});
+    if(r.p>0&&r.c>0)items.push({id:uid(),p:r.p,c:r.c,cat:_batchCat,...(r.op?{op:r.op}:{})});
   });
   setCurItems(items);saveS();renderCurrent();updateAllTotals();
   _batchRows=[];
@@ -2021,6 +2310,7 @@ function saveBatch(){
     document.getElementById('batch-cat-sel').value='';
     document.getElementById('batch-cat-inp').style.display='none';
     _batchCat='';
+    _resetBatchOP();
     _setBatchInputsLocked(true);
     document.getElementById('batch-cat-sel').focus();
   },1200);

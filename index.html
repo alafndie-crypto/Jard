@@ -483,7 +483,7 @@ input,button{font-family:'Tajawal',sans-serif}
         <datalist id="cat-dl">
           <option value="نسائي"><option value="رجالي"><option value="بناتي">
           <option value="ولادي"><option value="مواليد"><option value="ألعاب">
-          <option value="كماليات"><option value="أحذية"><option value="داخلي">
+          <option value="كماليات"><option value="أحذية"><option value="داخلي"><option value="شنطه">
         </datalist>
       </div>
       <div class="m-pin-row" onclick="togglePin()">
@@ -639,6 +639,7 @@ input,button{font-family:'Tajawal',sans-serif}
       <option value="كماليات">كماليات</option>
       <option value="أحذية">أحذية</option>
       <option value="داخلي">داخلي</option>
+      <option value="شنطه">شنطه</option>
       <option value="__other__">✏️ صنف آخر...</option>
     </select>
     <input type="text" class="batch-cat-inp" id="batch-cat-inp" placeholder="اكتب الصنف" oninput="onBatchCatCustom()">
@@ -1208,7 +1209,7 @@ document.getElementById('cm-yes').addEventListener('click',()=>{if(pendingAction
 // ── إعادة تسمية أو تبديل صنف كامل ──
 function renameCat(encodedOldCat){
   const oldCat=decodeURIComponent(encodedOldCat);
-  const suggestions=['نسائي','رجالي','بناتي','ولادي','مواليد','ألعاب','كماليات','أحذية','داخلي'];
+  const suggestions=['نسائي','رجالي','بناتي','ولادي','مواليد','ألعاب','كماليات','أحذية','داخلي','شنطه'];
   // الأصناف الموجودة حالياً في هذا القسم (باستثناء الصنف الحالي)
   const {g}=groupByCat(curItems());
   const otherCats=Object.keys(g).filter(c=>c!==oldCat);
@@ -1775,36 +1776,27 @@ function exportXLSXPerBranch(){
 function exportXLSX(){const cfg=S.settings;XLSX.writeFile(buildXLSX(false),`جرد_${cfg.locationName}_${cfg.year}.xlsx`);}
 function exportXLSXGrouped(){const cfg=S.settings;XLSX.writeFile(buildXLSX(true),`جرد_مجمع_${cfg.locationName}_${cfg.year}.xlsx`);}
 
-function buildXLSXFinal(){
-  const cfg=S.settings,wb=XLSX.utils.book_new(),yr=cfg.year,loc=cfg.locationName;
-
-  // ── جمع وتجميع كل الأصناف ──
-  const allItems=[
-    ...WH_SECS.flatMap(s=>S.warehouse[s]),
-    ...S.branch1,
-    ...(cfg.branchCount===2?S.branch2:[])
-  ];
+function _makeFinalSheet(items,title,yr){
+  // ── جمع وتجميع الأصناف داخل هذه المجموعة فقط ──
   const map={};
-  allItems.forEach(it=>{
+  items.forEach(it=>{
     const key=it.cat+'|||'+it.p;
     if(map[key])map[key].c+=it.c;
     else map[key]={p:it.p,c:it.c,cat:it.cat};
   });
   const merged=Object.values(map);
 
-  // الأصناف الفريدة والأسعار الفريدة مرتّبة
   const allCats=[...new Set(merged.map(i=>i.cat))];
   const allPrices=[...new Set(merged.map(i=>i.p))].sort((a,b)=>a-b);
 
-  // تجميع حسب الصنف لجدول التفصيل
   const catMap={};
   merged.forEach(it=>{if(!catMap[it.cat])catMap[it.cat]=[];catMap[it.cat].push(it);});
   Object.keys(catMap).forEach(cat=>catMap[cat].sort((a,b)=>a.p-b.p));
 
-  // ── بناء الجدول التفصيلي (عمود A-D) ──
+  // ── الجدول التفصيلي (عمود A-D) ──
   const mainRows=[];
   mainRows.push([CO_NAME,'','','']);
-  mainRows.push([`خلاصة الجرد النهائي - ${loc} - ${yr}`,'','','']);
+  mainRows.push([`خلاصة الجرد النهائي - ${title} - ${yr}`,'','','']);
   mainRows.push(['','','','']);
   mainRows.push(['السعر','العدد','الصنف','الإجمالي']);
   let grand=0;
@@ -1812,26 +1804,21 @@ function buildXLSXFinal(){
   if(!catsList.length){mainRows.push([0,0,'لا توجد بيانات',0]);}
   else{
     catsList.forEach(cat=>{
-      const items=catMap[cat];
-      items.forEach(it=>{grand+=it.p*it.c;mainRows.push([it.p,it.c,cat,it.p*it.c]);});
+      catMap[cat].forEach(it=>{grand+=it.p*it.c;mainRows.push([it.p,it.c,cat,it.p*it.c]);});
     });
     mainRows.push(['','','الإجمالي الكلي النهائي',grand]);
   }
 
-  // ── بناء الجدول المحوري (Pivot) ──
-  // pivot[price][cat] = إجمالي العدد
+  // ── الجدول المحوري (Pivot) ──
   const pivotData={};
   allPrices.forEach(p=>{pivotData[p]={};allCats.forEach(c=>{pivotData[p][c]=0;});});
   merged.forEach(it=>{pivotData[it.p][it.cat]+=it.c;});
 
   const pivotRows=[];
-  // صفوف فارغة لتوافق الترويسة
   pivotRows.push(['']);
   pivotRows.push(['']);
   pivotRows.push(['']);
-  // رأس الجدول المحوري
   pivotRows.push(['السعر',...allCats,'إجمالي العدد','إجمالي القيمة']);
-  // صفوف البيانات
   allPrices.forEach(p=>{
     const row=[p];
     let totCount=0;
@@ -1843,7 +1830,6 @@ function buildXLSXFinal(){
     row.push(totCount,totCount*p);
     pivotRows.push(row);
   });
-  // صف الإجمالي الكلي في المحوري
   const totRow=['الإجمالي'];
   let grandCount=0,grandVal=0;
   allCats.forEach(c=>{
@@ -1855,14 +1841,10 @@ function buildXLSXFinal(){
   pivotRows.push(totRow);
 
   // ── دمج الجدولين جنباً إلى جنب ──
-  const SEP_COL=1; // عمود فراغ بين الجدولين
+  const SEP_COL=1;
   const totalR=Math.max(mainRows.length,pivotRows.length);
   const combined=[];
-  const merges=[];
-  // دمج خلايا الترويسة في الجدول الرئيسي
-  merges.push({s:{r:0,c:0},e:{r:0,c:3}});
-  merges.push({s:{r:1,c:0},e:{r:1,c:3}});
-
+  const merges=[{s:{r:0,c:0},e:{r:0,c:3}},{s:{r:1,c:0},e:{r:1,c:3}}];
   for(let r=0;r<totalR;r++){
     const mR=mainRows[r]?[...mainRows[r]]:['','','',''];
     while(mR.length<4)mR.push('');
@@ -1872,14 +1854,28 @@ function buildXLSXFinal(){
 
   const ws=XLSX.utils.aoa_to_sheet(combined);
   ws['!merges']=merges;
-  // عرض الأعمدة
-  const colWidths=[{wch:10},{wch:10},{wch:22},{wch:14},{wch:3}]; // main + sep
-  colWidths.push({wch:10}); // السعر pivot
+  const colWidths=[{wch:10},{wch:10},{wch:22},{wch:14},{wch:3}];
+  colWidths.push({wch:10});
   allCats.forEach(()=>colWidths.push({wch:12}));
-  colWidths.push({wch:14},{wch:16}); // إجمالي العدد والقيمة
+  colWidths.push({wch:14},{wch:16});
   ws['!cols']=colWidths;
   ws['!views']=[{rightToLeft:true}];
-  XLSX.utils.book_append_sheet(wb,ws,'خلاصة الجرد النهائي');
+  return ws;
+}
+
+function buildXLSXFinal(){
+  const cfg=S.settings,wb=XLSX.utils.book_new(),yr=cfg.year;
+
+  // ── الشيت الأول: المستودع + الفرع 1 ──
+  const group1Items=[...WH_SECS.flatMap(s=>S.warehouse[s]),...S.branch1];
+  const group1Title=`${cfg.branch1Name} + المستودع`;
+  XLSX.utils.book_append_sheet(wb,_makeFinalSheet(group1Items,group1Title,yr),cfg.branch1Name.substring(0,31));
+
+  // ── الشيت الثاني: الفرع 2 مستقل (فقط إذا كان هناك فرعان) ──
+  if(cfg.branchCount===2){
+    XLSX.utils.book_append_sheet(wb,_makeFinalSheet(S.branch2,cfg.branch2Name,yr),cfg.branch2Name.substring(0,31));
+  }
+
   XLSX.utils.book_append_sheet(wb,_buildOldPriceSheet(),'أسعار مخفضة');
   return wb;
 }
